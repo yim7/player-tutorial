@@ -9,9 +9,6 @@ SDL_Window *window;
 SDL_Texture *texture;
 
 void
-save_frame(uint8_t *buf, int linesize, int width, int height, const char *path);
-
-void
 init_sdl(int width, int height) {
     int ret;
     ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);
@@ -202,17 +199,4 @@ main(int argc, char const *argv[]) {
     SDL_Quit();
 
     return 0;
-}
-
-void
-save_frame(uint8_t *buf, int linesize, int width, int height, const char *path) {
-
-    FILE *file = fopen(path, "wb");
-    fprintf(file, "P6\n%d %d\n255\n", width, height);
-    // printf("line size %d\n", frame->linesize[0]);
-    for (size_t i = 0; i < height; i++) {
-        fwrite(buf + i * linesize, 1, width * 3, file);
-    }
-
-    fclose(file);
 }
