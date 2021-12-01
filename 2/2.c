@@ -30,26 +30,27 @@ main(int argc, char const *argv[]) {
     AVFormatContext *fmt_ctx = NULL;
 
     // 打开视频文件
-    // 只会读取文件开始的一些数据，用来识别封装
-    // 套路代码，注意第一个参数是双重指针，
+    // 套路代码，注意第一个参数是 fmt_ctx 的地址
+    // 因为是函数内部实际创建 AVFormatContext，并修改 fmt_ctx 的值
     ret = avformat_open_input(&fmt_ctx, filename, NULL, NULL);
     if (ret < 0) {
         printf("Could not open file %s\n", filename);
         return -1;
     }
 
-    // 获取 stream 信息
+    // 获取 stream 信息，写入到 fmt_ctx 中
+    // nb_streams 表示 stream 的个数
+    // streams 数组保存所有的 stream 结构
     ret = avformat_find_stream_info(fmt_ctx, NULL);
     if (ret < 0) {
         printf("Could not find stream info %s\n", filename);
         return -1;
     }
 
-    // 这是一个方便的调试函数，用来打印文件信息
-    // 第一个参数是上面打开的 AVFormatContext
-    // 第二个参数是 stream 编号，一般 0 是视频，1 是音频
+    // 打印视频的详细信息
+    // 第一个参数是文件的 AVFormatContext
     // 第三个参数是打开的文件名
-    // 最后一个参数表示是输入文件还是输出文件，0，表示输入文件，因为我们是读取文件，所以是 0
+    // 其他参数不用管，写 0
     av_dump_format(fmt_ctx, 0, filename, 0);
 
     // 找到视频流
@@ -90,21 +91,18 @@ main(int argc, char const *argv[]) {
     int height = codec_ctx->height;
     init_sdl(width, height);
 
-    // 用来解码一帧图片
+    // 保存解码出的 frame，是 yuv 格式的图片
     AVFrame *frame = av_frame_alloc();
     // 用来保存 yuv420p
     AVFrame *frame_out = av_frame_alloc();
     AVPacket *packet = av_packet_alloc();
 
     // 负责图像转换的功能
-    struct SwsContext *sws_ctx =
-        sws_getContext(codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height,
-                       AV_PIX_FMT_YUV420P, SWS_BILINEAR, NULL, NULL, NULL);
+    struct SwsContext *sws_ctx = sws_getContext(width, height, codec_ctx->pix_fmt, width, height, AV_PIX_FMT_YUV420P,
+                                                SWS_BILINEAR, NULL, NULL, NULL);
+    // 分配存放图片数据的内存，关联到 frame
     int buffer_size = av_image_get_buffer_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height, 32);
     uint8_t *buffer = av_malloc(sizeof(uint8_t) * buffer_size);
-    // 根据图片宽高、像素格式，计算每行的字节数
-    // frame data 数组，第一个元素被设置为我们传入的 buffer
-    // linesize 是个数组，表示每个颜色组成一行所占字节数
     av_image_fill_arrays(frame_out->data, frame_out->linesize, buffer, AV_PIX_FMT_YUV420P, codec_ctx->width,
                          codec_ctx->height, 32);
 
@@ -112,7 +110,6 @@ main(int argc, char const *argv[]) {
     int last_pts = 0;
 
     AVRational time_base = video_stream->time_base;
-    int delta = 60 / av_q2d(time_base);
     while (av_read_frame(fmt_ctx, packet) == 0) {
         // 只要视频流
         if (packet->stream_index != video_stream_index) {
@@ -126,7 +123,7 @@ main(int argc, char const *argv[]) {
             return -1;
         }
 
-        // packet 里可能有多个完整的 frame，都读出来保存为图片
+        // packet 里可能有多个完整的 frame
         while (1) {
             ret = avcodec_receive_frame(codec_ctx, frame);
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
@@ -138,7 +135,6 @@ main(int argc, char const *argv[]) {
 
             frame_count += 1;
 
-            // todo: stride?
             sws_scale(sws_ctx, (const uint8_t *const *)frame->data, frame->linesize, 0, codec_ctx->height,
                       frame_out->data, frame_out->linesize);
             double fps = av_q2d(video_stream->r_frame_rate);
