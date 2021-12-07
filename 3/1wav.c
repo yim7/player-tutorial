@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <stdio.h>
 
 #define MUS_PATH "music.wav"
 
@@ -35,7 +36,7 @@ main(int argc, char *argv[]) {
     // set the callback function
     wav_spec.callback = my_audio_callback;
     wav_spec.userdata = NULL;
-    
+
     // set our global static variables
     audio_pos = wav_buffer; // copy sound buffer
     audio_len = wav_length; // copy file length
@@ -67,12 +68,9 @@ void
 my_audio_callback(void *userdata, Uint8 *stream, int len) {
     if (audio_len == 0)
         return;
-
+    printf("callback read len: %d\n", len);
     len = (len > audio_len ? audio_len : len);
-    // SDL_memcpy (stream, audio_pos, len); 					// simply copy from one buffer into the
-    // other
-    SDL_MixAudio(stream, audio_pos, len, SDL_MIX_MAXVOLUME); // mix from one buffer into another
-
+    SDL_memcpy(stream, audio_pos, len);
     audio_pos += len;
     audio_len -= len;
 }

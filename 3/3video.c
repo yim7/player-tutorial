@@ -5,29 +5,38 @@
 #define MUS_PATH "music.wav"
 #define log_error(msg) fprintf(stderr, msg ": %s\n", SDL_GetError())
 
-int
-main(int argc, char *argv[]) {
-    // 初始化 sdl 音频
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-        return 1;
+SDL_Renderer *renderer;
+SDL_Window *window;
+SDL_Texture *texture;
+SDL_AudioDeviceID audio_device;
+void
+init_sdl(int width, int height) {
+    int ret;
+    ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER);
+    if (ret != 0) {
+        printf("Could not initialize SDL - %s\n.", SDL_GetError());
+        exit(-1);
     }
+    // 初始化图形窗口
+    window = SDL_CreateWindow("SDL Video Player", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height,
+                              SDL_WINDOW_ALLOW_HIGHDPI);
+    renderer = SDL_CreateRenderer(window, -1,
+                                  SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, width, height);
 
-    // 加载 wav 音频文件
-    static Uint32 wav_length;
-    static Uint8 *wav_buffer;
-    static SDL_AudioSpec wav_spec;
-    if (SDL_LoadWAV(MUS_PATH, &wav_spec, &wav_buffer, &wav_length) == NULL) {
-        return 1;
-    }
-    // 使用 SDL_QueueAudio，需要把这俩设置为 NULL
-    wav_spec.callback = NULL;
-    wav_spec.userdata = NULL;
-
-    SDL_AudioDeviceID device_id = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, SDL_AUDIO_ALLOW_ANY_CHANGE);
-    if (device_id < 0) {
+    // 打开音频设备
+    audio_device = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    if (audio_device < 0) {
         fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
         exit(-1);
     }
+}
+
+int
+main(int argc, char *argv[]) {
+    init_sdl(1920, 1080);
+
+    // 加载 wav 音频文件
 
     // 打开的音频设备默认是静音状态，取消静音
     SDL_PauseAudioDevice(device_id, 0);
