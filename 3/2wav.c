@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MUS_PATH "music.wav"
+#define MUS_PATH "sound.wav"
 #define log_error(msg) fprintf(stderr, msg ": %s\n", SDL_GetError())
 
 int
@@ -19,6 +19,9 @@ main(int argc, char *argv[]) {
     if (SDL_LoadWAV(MUS_PATH, &wav_spec, &wav_buffer, &wav_length) == NULL) {
         return 1;
     }
+
+    printf("audio spec, format: %x, freq: %d, channels: %d, samples: %d\n", wav_spec.format, wav_spec.freq,
+           wav_spec.channels, wav_spec.samples);
     // 使用 SDL_QueueAudio，需要把这俩设置为 NULL
     wav_spec.callback = NULL;
     wav_spec.userdata = NULL;
@@ -46,8 +49,8 @@ main(int argc, char *argv[]) {
         }
         audio_pos += len;
         audio_len -= len;
-        SDL_Delay(100);
-        printf("pos: %p, len: %d\n", audio_pos, audio_len);
+        // SDL_Delay(100);
+        // printf("pos: %p, len: %d\n", audio_pos, audio_len);
     }
 
     // 等待队列的音频播放完

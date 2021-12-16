@@ -52,4 +52,5 @@ Mkfile.old
 dkms.conf
 
 *.mp4
+*.wav
 .DS_Store
