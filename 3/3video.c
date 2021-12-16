@@ -9,7 +9,31 @@
 char wav_buf[100 * 1024 * 1024];
 
 void
-save_wave(const char * name, const char*buffer, int size)
+save_wave(const char * filename, const char*data, int size, int sample_rate, int channels, int bits_per_sample) {
+    FILE *f = fopen(filename, "w");
+    write(f, "RIFF", 4);
+    int chunk_size = size + 36;
+    write(f, &chunk_size, 4);
+    write(f, "WAVE", 4);
+    // chunk1
+    write(f, "fmt ", 4);
+    int chunk1_size = 16;
+    write(f, &chunk1_size, 4);
+    int format = 1;
+    write(f, &format, 4);
+    write(f, &channels, 2);
+    write(f, &sample_rate, 4);
+    int byte_rate = sample_rate * bits_per_sample * channels / 8;
+    write(f, &byte_rate, 4);
+    int block_align = bits_per_sample *channels / 8;
+    write(f, &block_align, 2);    
+    write(f, &bits_per_sample, 2);   
+    // chunk2
+    write(f, "data ", 4);
+    write(f, &size, 4);
+    write(f, data, size);
+}
+
 void
 init_sdl() {
     int ret;
