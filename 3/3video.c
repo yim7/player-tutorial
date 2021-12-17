@@ -1,16 +1,18 @@
 #include <SDL2/SDL.h>
+#include <fcntl.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 char wav_buf[100 * 1024 * 1024];
 
 void
-save_wave(const char * filename, const char*data, int size, int sample_rate, int channels, int bits_per_sample) {
-    FILE *f = fopen(filename, "w");
+save_wave(const char *filename, const char *data, int size, int sample_rate, int channels, int bits_per_sample) {
+    int f = open(filename, O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
     write(f, "RIFF", 4);
     int chunk_size = size + 36;
     write(f, &chunk_size, 4);
@@ -20,14 +22,14 @@ save_wave(const char * filename, const char*data, int size, int sample_rate, int
     int chunk1_size = 16;
     write(f, &chunk1_size, 4);
     int format = 1;
-    write(f, &format, 4);
+    write(f, &format, 2);
     write(f, &channels, 2);
     write(f, &sample_rate, 4);
     int byte_rate = sample_rate * bits_per_sample * channels / 8;
     write(f, &byte_rate, 4);
-    int block_align = bits_per_sample *channels / 8;
-    write(f, &block_align, 2);    
-    write(f, &bits_per_sample, 2);   
+    int block_align = bits_per_sample * channels / 8;
+    write(f, &block_align, 2);
+    write(f, &bits_per_sample, 2);
     // chunk2
     write(f, "data ", 4);
     write(f, &size, 4);
@@ -209,11 +211,12 @@ main(int argc, char const *argv[]) {
                 return -1;
             }
 
-            int frame_size = frame_resample->linesize[0];
+            int frame_size =
+                frame_resample->nb_samples * frame_resample->channels * av_get_bytes_per_sample(frame_resample->format);
             printf("frame sample %d, %d\n", frame->linesize[0], frame_size);
             memcpy(wav_buf + wav_length, frame_resample->data[0], frame_size);
             wav_length += frame_size;
-            // SDL_QueueAudio(device_id, frame_resample->data[0], frame_size);
+            SDL_QueueAudio(device_id, frame_resample->data[0], frame_size);
             // 释放 packet 内部数据，并把 packet 一些自动设为默认值
             av_packet_unref(packet);
 
@@ -233,9 +236,8 @@ main(int argc, char const *argv[]) {
             }
         }
     }
-    printf("wav length: %d\n", wav_length);
-    FILE *audio = fopen("sound1.wav", "w");
-    fwrite(wav_buf, sizeof(char), wav_length, audio);
+    // printf("wav length: %d\n", wav_length);
+    // save_wave("sound1.wav", wav_buf, wav_length, sample_rate, channels, 32);
     // 等待队列的音频播放完
     while (SDL_GetQueuedAudioSize(device_id) > 0) {
         SDL_Delay(100);
