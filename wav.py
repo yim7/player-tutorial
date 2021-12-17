@@ -24,7 +24,7 @@ def save_wav(filename: str, sample_rate: int, sample_width: int, channels: int, 
 
 
 samples = []
-for i in range(100000):
+for i in range(100):
     samples.append(0)
     samples.append(255)
 
