@@ -243,9 +243,7 @@ main(int argc, char const *argv[]) {
 
                 sws_scale(sws_ctx, (const uint8_t *const *)frame->data, frame->linesize, 0, height, frame_scale->data,
                           frame_scale->linesize);
-                double fps = av_q2d(video_stream->r_frame_rate);
-                double sleep_time = 1 / fps;
-                // SDL_Delay(1000 * sleep_time);
+
                 SDL_Rect rect;
                 rect.x = 0;
                 rect.y = 0;
